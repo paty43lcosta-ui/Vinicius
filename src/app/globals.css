@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-charcoal: #1b1b1d;
+  --color-charcoal-soft: #25252a;
+  --color-cream: #f2ece2;
+  --color-brass: #c08a35;
+  --color-brass-light: #e4c98a;
+  --color-barber-red: #8c2f2a;
+  --color-barber-line: #3a3a3f;
+}
+
+body {
+  background-color: var(--color-charcoal);
+  color: var(--color-cream);
+  font-family: var(--font-body), sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer utilities {
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
