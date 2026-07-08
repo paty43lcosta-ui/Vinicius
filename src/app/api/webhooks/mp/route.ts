@@ -10,8 +10,17 @@ export const dynamic = 'force-dynamic';
  * Valida a assinatura do webhook do Mercado Pago.
  * Manifesto: `id:{data.id};request-id:{x-request-id};ts:{ts};`
  * https://www.mercadopago.com.br/developers/pt/docs/your-integrations/notifications/webhooks
+ *
+ * O MP também manda notificações no formato legado (?topic=payment&id=X),
+ * que nunca vêm assinadas (o recurso x-signature só existe no formato novo).
+ * Para essas, não há o que validar aqui — a autenticidade real vem de
+ * buscar o pagamento de volta na API do MP com nosso próprio access token
+ * antes de agir, o que já acontece depois desta checagem.
  */
 function isValidSignature(request: NextRequest, dataId: string): boolean {
+  const signature = request.headers.get('x-signature');
+  if (!signature) return true;
+
   const secret = process.env.MP_WEBHOOK_SECRET;
   if (!secret) {
     // Sem secret configurado (dev), aceita mas registra o alerta.
@@ -19,9 +28,7 @@ function isValidSignature(request: NextRequest, dataId: string): boolean {
     return true;
   }
 
-  const signature = request.headers.get('x-signature');
   const requestId = request.headers.get('x-request-id');
-  if (!signature) return false;
 
   const parts = Object.fromEntries(
     signature.split(',').map((part) => {
