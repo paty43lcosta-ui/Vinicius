@@ -44,15 +44,35 @@ function isValidSignature(request: NextRequest, dataId: string): boolean {
 }
 
 export async function POST(request: NextRequest) {
-  let body: { action?: string; type?: string; data?: { id?: string } };
+  const rawBody = await request.text();
+  let body: {
+    action?: string;
+    type?: string;
+    topic?: string;
+    data?: { id?: string };
+    resource?: string;
+  };
   try {
-    body = await request.json();
+    body = rawBody ? JSON.parse(rawBody) : {};
   } catch {
     return NextResponse.json({ error: 'invalid body' }, { status: 400 });
   }
 
+  // Loga toda notificação recebida — o MP usa formatos diferentes
+  // (novo: type/data.id; antigo IPN: topic/id) dependendo de como o
+  // pagamento foi criado, então é melhor ver exatamente o que chegou.
+  console.log('[webhook/mp] notificação recebida:', {
+    url: request.nextUrl.toString(),
+    body: rawBody,
+  });
+
+  // Formato novo (Webhooks v2): ?data.id=X&type=payment, body { data: { id } }
+  // Formato antigo (IPN v1): ?id=X&topic=payment
   const dataId =
-    request.nextUrl.searchParams.get('data.id') || body.data?.id || '';
+    request.nextUrl.searchParams.get('data.id') ||
+    body.data?.id ||
+    request.nextUrl.searchParams.get('id') ||
+    '';
 
   if (!dataId) {
     return NextResponse.json({ received: true });
@@ -62,8 +82,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'invalid signature' }, { status: 401 });
   }
 
+  const topic = request.nextUrl.searchParams.get('topic') || body.topic;
   const isPaymentEvent =
-    body.type === 'payment' || body.action?.startsWith('payment.');
+    body.type === 'payment' ||
+    body.action?.startsWith('payment.') ||
+    topic === 'payment';
   if (!isPaymentEvent) {
     return NextResponse.json({ received: true });
   }
@@ -139,7 +162,17 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error('[webhook/mp] Erro ao processar notificação:', error);
+    const notFound =
+      typeof error === 'object' &&
+      error !== null &&
+      'status' in error &&
+      (error as { status?: number }).status === 404;
+    console.error(
+      notFound
+        ? `[webhook/mp] Pagamento ${dataId} não encontrado no Mercado Pago (id incorreto ou notificação de teste):`
+        : '[webhook/mp] Erro ao processar notificação:',
+      error,
+    );
     // 500 faz o MP reenviar a notificação depois
     return NextResponse.json({ error: 'internal error' }, { status: 500 });
   }
