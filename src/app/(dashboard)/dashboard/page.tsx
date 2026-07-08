@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { StatCard } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/Badge';
@@ -17,7 +18,7 @@ export default async function DashboardOverviewPage() {
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id')
+    .select('id, mp_access_token')
     .eq('owner_id', user!.id)
     .single();
 
@@ -91,6 +92,26 @@ export default async function DashboardOverviewPage() {
           month: 'long',
         })}
       </p>
+
+      {!tenant!.mp_access_token && (
+        <Link
+          href="/dashboard/config#mercado-pago"
+          className="mt-6 flex flex-col items-start justify-between gap-3 rounded-2xl border border-brass/50 bg-brass/10 p-4 transition-colors hover:bg-brass/15 sm:flex-row sm:items-center"
+        >
+          <span>
+            <span className="block font-display text-lg font-bold uppercase tracking-wide text-brass-light">
+              Falta conectar o Mercado Pago
+            </span>
+            <span className="mt-0.5 block text-sm text-cream/70">
+              Sem isso, ninguém consegue pagar o sinal na sua página. Leva
+              menos de 5 minutos — veja o passo a passo.
+            </span>
+          </span>
+          <span className="whitespace-nowrap rounded-xl bg-brass px-4 py-2 text-sm font-semibold text-charcoal">
+            Configurar agora →
+          </span>
+        </Link>
+      )}
 
       <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard

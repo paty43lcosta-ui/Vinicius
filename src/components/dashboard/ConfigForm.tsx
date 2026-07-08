@@ -29,9 +29,12 @@ export function ConfigForm({ tenant, exampleService }: Props) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedWebhook, setCopiedWebhook] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const publicUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/b/${slug}`;
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const publicUrl = `${origin}/b/${slug}`;
+  const webhookUrl = `${origin}/api/webhooks/mp`;
 
   // Checagem de unicidade do slug (debounce 400ms), ignorando o próprio tenant
   useEffect(() => {
@@ -92,6 +95,16 @@ export function ConfigForm({ tenant, exampleService }: Props) {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       setMessage({ type: 'error', text: 'Não foi possível copiar o link.' });
+    }
+  }
+
+  async function copyWebhookUrl() {
+    try {
+      await navigator.clipboard.writeText(webhookUrl);
+      setCopiedWebhook(true);
+      setTimeout(() => setCopiedWebhook(false), 2000);
+    } catch {
+      setMessage({ type: 'error', text: 'Não foi possível copiar a URL.' });
     }
   }
 
@@ -244,21 +257,104 @@ export function ConfigForm({ tenant, exampleService }: Props) {
       </Card>
 
       {/* Mercado Pago */}
-      <Card className="flex flex-col gap-3">
-        <h2 className="font-display text-lg font-bold uppercase tracking-wide text-brass-light">
-          Mercado Pago
-        </h2>
-        <p className="text-sm text-cream/60">
-          Cole o Access Token da sua conta Mercado Pago para receber os sinais
-          direto na sua conta. Sem token, a cobrança usa a conta da plataforma.
-        </p>
+      <Card id="mercado-pago" className="flex flex-col gap-4 scroll-mt-6">
+        <div>
+          <h2 className="font-display text-lg font-bold uppercase tracking-wide text-brass-light">
+            Mercado Pago
+          </h2>
+          <p className="mt-1 text-sm text-cream/60">
+            Conecte sua conta para receber os sinais dos agendamentos direto
+            no seu Mercado Pago. Sem isso, ninguém consegue pagar na sua
+            página.
+          </p>
+        </div>
+
+        {!mpToken && (
+          <span className="w-fit rounded-full border border-brass/40 bg-brass/10 px-3 py-1 text-xs font-medium text-brass-light">
+            ⚠ Ainda não conectado
+          </span>
+        )}
+
+        <ol className="flex flex-col gap-3 text-sm text-cream/80">
+          <li className="flex gap-3">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brass/20 text-xs font-bold text-brass-light">
+              1
+            </span>
+            <span>
+              Acesse o{' '}
+              <a
+                href="https://www.mercadopago.com.br/developers/panel"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-brass underline hover:text-brass-light"
+              >
+                painel de desenvolvedores do Mercado Pago
+              </a>{' '}
+              e crie uma aplicação (ou use uma existente).
+            </span>
+          </li>
+          <li className="flex gap-3">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brass/20 text-xs font-bold text-brass-light">
+              2
+            </span>
+            <span>
+              Na aplicação, abra <strong>Credenciais de produção</strong>{' '}
+              (ou <strong>Credenciais de teste</strong>, se quiser validar
+              antes de cobrar de verdade) e copie o <strong>Access Token</strong>{' '}
+              — começa com <code className="text-brass-light">APP_USR-</code>{' '}
+              ou <code className="text-brass-light">TEST-</code>. Cole no
+              campo abaixo.
+            </span>
+          </li>
+          <li className="flex gap-3">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brass/20 text-xs font-bold text-brass-light">
+              3
+            </span>
+            <span>
+              Ainda na aplicação, vá em <strong>Webhooks</strong> (ou{' '}
+              <strong>Notificações</strong>) → <strong>Configurar
+              notificações</strong>, cole a URL abaixo, marque o evento{' '}
+              <strong>Pagamentos</strong> e salve.
+            </span>
+          </li>
+          <li className="flex gap-3">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brass/20 text-xs font-bold text-brass-light">
+              4
+            </span>
+            <span>
+              Se sua conta ainda não usa Pix, cadastre uma chave Pix no
+              Mercado Pago (app ou site) — sem ela, os pagamentos via Pix não
+              funcionam.
+            </span>
+          </li>
+        </ol>
+
+        <div className="rounded-lg border border-barber-line bg-charcoal p-3">
+          <p className="mb-1.5 text-xs uppercase tracking-wider text-cream/50">
+            URL do webhook (passo 3)
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <code className="flex-1 truncate text-sm text-cream/70">
+              {webhookUrl}
+            </code>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={copyWebhookUrl}
+            >
+              {copiedWebhook ? '✓ Copiado' : 'Copiar'}
+            </Button>
+          </div>
+        </div>
+
         <Input
           label="Access Token"
           type="password"
           placeholder="APP_USR-…"
           value={mpToken}
           onChange={(e) => setMpToken(e.target.value)}
-          hint="Encontre em mercadopago.com.br → Seu negócio → Configurações → Credenciais"
+          hint="Cole aqui o token do passo 2"
         />
       </Card>
 
